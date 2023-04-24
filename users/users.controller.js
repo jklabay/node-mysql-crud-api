@@ -2,20 +2,39 @@
 const router = express.Router();
 const Joi = require('joi');
 const validateRequest = require('_middleware/validate-request');
-const Role = require('_helpers/role');
+const authorize = require('_middleware/authorize')
 const userService = require('./user.service');
 
 // routes
-
-router.get('/', getAll);
-router.get('/:id', getById);
-router.post('/', createSchema, create);
-router.put('/:id', updateSchema, update);
-router.delete('/:id', _delete);
+router.post('/authenticate', authenticateSchema, authenticate);
+router.get('/', authorize(), getAll);
+router.get('/current', authorize(), getCurrent);
+router.get('/:id', authorize(), getById);
+router.put('/:id', authorize(), updateSchema, update);
+router.delete('/:id', authorize(), _delete);
+router.post('/register', createSchema, create);
 
 module.exports = router;
 
 // route functions
+
+function authenticateSchema(req, res, next) {
+    const schema = Joi.object({
+        username: Joi.string().required(),
+        password: Joi.string().required()
+    });
+    validateRequest(req, next, schema);
+}
+
+function authenticate(req, res, next) {
+    userService.authenticate(req.body)
+        .then(user => res.json(user))
+        .catch(next);
+}
+
+function getCurrent(req, res, next) {
+    res.json(req.user);
+}
 
 function getAll(req, res, next) {
     userService.getAll()
@@ -31,7 +50,13 @@ function getById(req, res, next) {
 
 function create(req, res, next) {
     userService.create(req.body)
-        .then(() => res.json({ message: 'User created' }))
+        .then(() => res.json({ message: 'Registration successful' }))
+        .catch(next);
+}
+
+function register(req, res, next) {
+    userService.create(req.body)
+        .then(() => res.json({ message: 'Registration successful' }))
         .catch(next);
 }
 
@@ -51,6 +76,7 @@ function _delete(req, res, next) {
 
 function createSchema(req, res, next) {
     const schema = Joi.object({
+        username: Joi.string().required(),
         title: Joi.string().required(),
         firstName: Joi.string().required(),
         lastName: Joi.string().required(),

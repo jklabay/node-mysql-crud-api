@@ -1,13 +1,27 @@
-﻿const bcrypt = require('bcryptjs');
+﻿const config = require('config.json');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const db = require('_helpers/db');
 
 module.exports = {
+    authenticate,
     getAll,
     getById,
     create,
     update,
     delete: _delete
 };
+
+async function authenticate({ username, password }) {
+    const user = await db.User.scope('withHash').findOne({ where: { username } });
+
+    if (!user || !(await bcrypt.compare(password, user.hash)))
+        throw 'Username or password is incorrect';
+
+    // authentication successful
+    const token = jwt.sign({ sub: user.id }, config.secret, { expiresIn: '1d' });
+    return { ...omitHash(user.get()), token };
+}
 
 async function getAll() {
     return await db.User.findAll();
@@ -62,4 +76,9 @@ async function getUser(id) {
     const user = await db.User.findByPk(id);
     if (!user) throw 'User not found';
     return user;
+}
+
+function omitHash(user) {
+    const { hash, ...userWithoutHash } = user;
+    return userWithoutHash;
 }
