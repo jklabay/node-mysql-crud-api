@@ -15,7 +15,7 @@ module.exports = {
 async function authenticate({ username, password }) {
     const user = await db.User.scope('withHash').findOne({ where: { username } });
 
-    if (!user || !(await bcrypt.compare(password, user.hash)))
+    if (!user || !(await bcrypt.compare(password, user.passwordHash)))
         throw 'Username or password is incorrect';
 
     // authentication successful
@@ -79,6 +79,6 @@ async function getUser(id) {
 }
 
 function omitHash(user) {
-    const { hash, ...userWithoutHash } = user;
+    const { passwordHash, ...userWithoutHash } = user;
     return userWithoutHash;
 }
